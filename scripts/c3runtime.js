@@ -2783,6 +2783,45 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 'use strict';{const C3=self.C3;C3.Behaviors.Fade.Exps={FadeInTime(){return this._fadeInTime},WaitTime(){return this._waitTime},FadeOutTime(){return this._fadeOutTime}}};
 
 
+'use strict';{const C3=self.C3;C3.Behaviors.MoveTo=class MoveToBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.MoveTo.Type=class MoveToType extends C3.SDKBehaviorTypeBase{constructor(behaviorType){super(behaviorType)}Release(){super.Release()}OnCreate(){}}};
+
+
+'use strict';{const C3=self.C3;const IBehaviorInstance=self.IBehaviorInstance;const PROP_MAX_SPEED=0;const PROP_ACCELERATION=1;const PROP_DECELERATION=2;const PROP_ROTATE_SPEED=3;const PROP_SET_ANGLE=4;const PROP_STOP_ON_SOLIDS=5;const PROP_ENABLED=6;C3.Behaviors.MoveTo.Instance=class MoveToInstance extends C3.SDKBehaviorInstanceBase{constructor(behInst,properties){super(behInst);this._maxSpeed=200;this._acc=600;this._dec=600;this._rotateSpeed=0;this._setAngle=true;this._stopOnSolids=false;this._isEnabled=
+true;this._speed=0;this._movingAngle=this.GetWorldInfo().GetAngle();this._waypoints=[];if(properties){this._maxSpeed=properties[PROP_MAX_SPEED];this._acc=properties[PROP_ACCELERATION];this._dec=properties[PROP_DECELERATION];this._rotateSpeed=C3.toRadians(properties[PROP_ROTATE_SPEED]);this._setAngle=properties[PROP_SET_ANGLE];this._stopOnSolids=properties[PROP_STOP_ON_SOLIDS];this._isEnabled=properties[PROP_ENABLED]}}Release(){super.Release()}SaveToJson(){return{"ms":this._maxSpeed,"acc":this._acc,
+"dec":this._dec,"rs":this._rotateSpeed,"sa":this._setAngle,"sos":this._stopOnSolids,"s":this._speed,"ma":this._movingAngle,"wp":this._waypoints.map(p=>({"x":p.x,"y":p.y})),"e":this._isEnabled}}LoadFromJson(o){this._maxSpeed=o["ms"];this._acc=o["acc"];this._dec=o["dec"];this._rotateSpeed=o["rs"];this._setAngle=o["sa"];this._stopOnSolids=o["sos"];this._speed=o["s"];this._movingAngle=o["ma"];this._waypoints=o["wp"].map(p=>({x:p["x"],y:p["y"]}));this._SetEnabled(o["e"]);if(this._isEnabled&&this._waypoints.length>
+0)this._StartTicking()}_AddWaypoint(x,y,isDirect){if(isDirect)C3.clearArray(this._waypoints);this._waypoints.push({x,y});if(this._isEnabled)this._StartTicking()}_GetWaypointCount(){return this._waypoints.length}_GetWaypointXAt(i){i=Math.floor(i);if(i<0||i>=this._waypoints.length)return 0;return this._waypoints[i].x}_GetWaypointYAt(i){i=Math.floor(i);if(i<0||i>=this._waypoints.length)return 0;return this._waypoints[i].y}_IsMoving(){return this._waypoints.length>0}_Stop(){C3.clearArray(this._waypoints);
+this._speed=0;this._StopTicking()}_GetTargetX(){if(this._waypoints.length>0)return this._waypoints[0].x;else return 0}_GetTargetY(){if(this._waypoints.length>0)return this._waypoints[0].y;else return 0}_SetSpeed(s){if(!this._IsMoving())return;this._speed=Math.min(s,this._maxSpeed)}_GetSpeed(){return this._speed}_SetMaxSpeed(ms){this._maxSpeed=Math.max(ms,0);this._SetSpeed(this._speed)}_GetMaxSpeed(){return this._maxSpeed}_IsRotationEnabled(){return this._rotateSpeed!==0}Tick(){if(!this._isEnabled||
+!this._IsMoving())return;const dt=this._runtime.GetDt(this._inst);const wi=this._inst.GetWorldInfo();const startX=wi.GetX();const startY=wi.GetY();const startAngle=wi.GetAngle();let curSpeed=this._speed;let maxSpeed=this._maxSpeed;const acc=this._acc;const dec=this._dec;const targetX=this._GetTargetX();const targetY=this._GetTargetY();const angleToTarget=C3.angleTo(startX,startY,targetX,targetY);let isWithinStoppingDistance=false;if(dec>0&&this._waypoints.length===1){const stoppingDist=.5*curSpeed*
+curSpeed/dec*1.0001;isWithinStoppingDistance=C3.distanceSquared(startX,startY,targetX,targetY)<=stoppingDist*stoppingDist;if(isWithinStoppingDistance){const remainingDist=C3.distanceTo(startX,startY,targetX,targetY);curSpeed=Math.sqrt(2*dec*remainingDist);maxSpeed=curSpeed;this._speed=curSpeed}}if(this._IsRotationEnabled()){const da=C3.angleDiff(this._movingAngle,angleToTarget);if(da>Number.EPSILON){const t=da/this._rotateSpeed;const dist=C3.distanceTo(wi.GetX(),wi.GetY(),targetX,targetY);const r=
+dist/(2*Math.sin(da));const curveDist=r*da;maxSpeed=Math.min(maxSpeed,C3.clamp(curveDist/t,0,this._maxSpeed))}}let curAcc=isWithinStoppingDistance?-dec:acc;const stepDist=Math.min(curSpeed*dt+.5*curAcc*dt*dt,maxSpeed*dt);if(isWithinStoppingDistance){if(dec>0){this._speed=Math.max(this._speed-dec*dt,0);if(this._speed===0){this._OnArrived(wi,targetX,targetY);return}}}else if(acc===0)this._speed=maxSpeed;else this._speed=Math.min(this._speed+acc*dt,maxSpeed);if(C3.distanceSquared(wi.GetX(),wi.GetY(),
+targetX,targetY)<=stepDist*stepDist){this._OnArrived(wi,targetX,targetY);return}if(this._IsRotationEnabled())this._movingAngle=C3.angleRotate(this._movingAngle,angleToTarget,this._rotateSpeed*dt);else this._movingAngle=angleToTarget;wi.OffsetXY(Math.cos(this._movingAngle)*stepDist,Math.sin(this._movingAngle)*stepDist);if(this._setAngle)wi.SetAngle(this._movingAngle);wi.SetBboxChanged();this._CheckSolidCollision(startX,startY,startAngle)}_OnArrived(wi,targetX,targetY){wi.SetXY(targetX,targetY);wi.SetBboxChanged();
+this._waypoints.shift();if(this._waypoints.length===0){this._speed=0;this._StopTicking()}this.GetScriptInterface().dispatchEvent(C3.New(C3.Event,"arrived"));this.Trigger(C3.Behaviors.MoveTo.Cnds.OnArrived)}_CheckSolidCollision(startX,startY,startAngle){const collisionEngine=this._runtime.GetCollisionEngine();if(this._stopOnSolids&&collisionEngine.TestOverlapSolid(this._inst)){this._Stop();const wi=this._inst.GetWorldInfo();const x=wi.GetX();const y=wi.GetY();const a=C3.angleTo(x,y,startX,startY);
+const dist=C3.distanceTo(x,y,startX,startY);if(!collisionEngine.PushOutSolid(this._inst,Math.cos(a),Math.sin(a),Math.max(dist,1))){wi.SetXY(startX,startY);wi.SetAngle(startAngle);wi.SetBboxChanged()}this.GetScriptInterface().dispatchEvent(C3.New(C3.Event,"hitsolid"));this.Trigger(C3.Behaviors.MoveTo.Cnds.OnHitSolid)}}_IsSetAngle(){return this._setAngle}_SetSetAngle(a){this._setAngle=!!a}_SetAngleOfMotion(a){this._movingAngle=a;if(this._isEnabled&&this._setAngle&&!this._IsMoving()){const wi=this.GetWorldInfo();
+wi.SetAngle(this._movingAngle);wi.SetBboxChanged()}}_GetAngleOfMotion(){return this._movingAngle}_SetAcceleration(a){this._acc=Math.max(a,0)}_GetAcceleration(){return this._acc}_SetDeceleration(d){this._dec=Math.max(d,0)}_GetDeceleration(){return this._dec}_SetRotateSpeed(r){this._rotateSpeed=Math.max(r,0)}_GetRotateSpeed(){return this._rotateSpeed}_SetStopOnSolids(e){this._stopOnSolids=!!e}_IsStopOnSolids(){return this._stopOnSolids}_SetEnabled(e){e=!!e;if(this._isEnabled===e)return;this._isEnabled=
+e;if(this._isEnabled&&this._IsMoving())this._StartTicking();else this._StopTicking()}_IsEnabled(){return this._isEnabled}GetPropertyValueByIndex(index){switch(index){case PROP_MAX_SPEED:return this._GetMaxSpeed();case PROP_ACCELERATION:return this._GetAcceleration();case PROP_DECELERATION:return this._GetDeceleration();case PROP_ROTATE_SPEED:return C3.toDegrees(this._GetRotateSpeed());case PROP_SET_ANGLE:return this._IsSetAngle();case PROP_STOP_ON_SOLIDS:return this._IsStopOnSolids();case PROP_ENABLED:return this._IsEnabled()}}SetPropertyValueByIndex(index,
+value){switch(index){case PROP_MAX_SPEED:this._SetMaxSpeed(value);break;case PROP_ACCELERATION:this._SetAcceleration(value);break;case PROP_DECELERATION:this._SetDeceleration(value);break;case PROP_ROTATE_SPEED:this._SetRotateSpeed(C3.toRadians(value));break;case PROP_SET_ANGLE:this._SetSetAngle(value);break;case PROP_STOP_ON_SOLIDS:this._SetStopOnSolids(value);break;case PROP_ENABLED:this._SetEnabled(value);break}}GetDebuggerProperties(){const prefix="behaviors.moveto";return[{title:"$"+this.GetBehaviorType().GetName(),
+properties:[{name:prefix+".debugger.speed",value:this._GetSpeed(),onedit:v=>this._SetSpeed(v)},{name:prefix+".debugger.angle-of-motion",value:C3.toDegrees(this._GetAngleOfMotion()),onedit:v=>this._movingAngle=C3.toRadians(v)},{name:prefix+".debugger.target-x",value:this._GetTargetX()},{name:prefix+".debugger.target-y",value:this._GetTargetY()},{name:prefix+".debugger.waypoint-count",value:this._GetWaypointCount()},{name:prefix+".properties.max-speed.name",value:this._GetMaxSpeed(),onedit:v=>this._SetMaxSpeed(v)},
+{name:prefix+".properties.acceleration.name",value:this._GetAcceleration(),onedit:v=>this._SetAcceleration(v)},{name:prefix+".properties.deceleration.name",value:this._GetDeceleration(),onedit:v=>this._SetDeceleration(v)},{name:prefix+".properties.rotate-speed.name",value:C3.toDegrees(this._GetRotateSpeed()),onedit:v=>this._SetRotateSpeed(C3.toRadians(v))},{name:prefix+".properties.enabled.name",value:this._IsEnabled(),onedit:v=>this._SetEnabled(v)}]}]}GetScriptInterfaceClass(){return self.IMoveToBehaviorInstance}};
+const map=new WeakMap;self.IMoveToBehaviorInstance=class IMoveToBehaviorInstance extends IBehaviorInstance{constructor(){super();map.set(this,IBehaviorInstance._GetInitInst().GetSdkInstance())}moveToPosition(x,y,isDirect=true){map.get(this)._AddWaypoint(x,y,!!isDirect)}getTargetX(){return map.get(this)._GetTargetX()}getTargetY(){return map.get(this)._GetTargetY()}getTargetPosition(){const b=map.get(this);return[b._GetTargetX(),b._GetTargetY()]}getWaypointCount(){return map.get(this)._GetWaypointCount()}getWaypointX(i){return map.get(this)._GetWaypointXAt(+i)}getWaypointY(i){return map.get(this)._GetWaypointYAt(+i)}getWaypoint(i){i=
++i;const b=map.get(this);return[b._GetWaypointXAt(i),b._GetWaypointYAt(i)]}stop(){map.get(this)._Stop()}get isMoving(){return map.get(this)._IsMoving()}get speed(){return map.get(this)._GetSpeed()}set speed(s){map.get(this)._SetSpeed(s)}get maxSpeed(){return map.get(this)._GetMaxSpeed()}set maxSpeed(ms){map.get(this)._SetMaxSpeed(ms)}get acceleration(){return map.get(this)._GetAcceleration()}set acceleration(a){map.get(this)._SetAcceleration(a)}get deceleration(){return map.get(this)._GetDeceleration()}set deceleration(d){map.get(this)._SetDeceleration(d)}get angleOfMotion(){return map.get(this)._GetAngleOfMotion()}set angleOfMotion(a){map.get(this)._SetAngleOfMotion(a)}get rotateSpeed(){return map.get(this)._GetRotateSpeed()}set rotateSpeed(r){map.get(this)._SetRotateSpeed(r)}get isStopOnSolids(){return map.get(this)._IsStopOnSolids()}set isStopOnSolids(e){map.get(this)._SetStopOnSolids(e)}get isEnabled(){return map.get(this)._IsEnabled()}set isEnabled(e){map.get(this)._SetEnabled(e)}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.MoveTo.Cnds={IsMoving(){return this._IsMoving()},CompareSpeed(cmp,s){return C3.compare(this._GetSpeed(),cmp,s)},IsEnabled(){return this._IsEnabled()},OnArrived(){return true},OnHitSolid(){return true}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.MoveTo.Acts={MoveToPosition(x,y,mode){this._AddWaypoint(x,y,mode===0)},MoveToObject(objectClass,imgPt,mode){if(!objectClass)return;const inst=objectClass.GetPairedInstance(this._inst);if(!inst||!inst.GetWorldInfo())return;const [x,y]=inst.GetImagePoint(imgPt);this._AddWaypoint(x,y,mode===0)},MoveAlongPathfindingPath(mode){const behInst=this._inst.GetBehaviorSdkInstanceFromCtor(C3.Behaviors.Pathfinding);if(!behInst)return;const path=behInst._GetPath();if(path.length===
+0)return;for(let i=0,len=path.length;i<len;++i){const n=path[i];this._AddWaypoint(n.x,n.y,i===0&&mode===0)}},MoveAlongTimeline(timeline,trackId,mode){let trackState=null;if(trackId)trackState=timeline.GetTrackById(trackId);else trackState=C3.first(timeline.GetTracks());if(!trackState)return;const xTrack=trackState.GetPropertyTrack("offsetX");const yTrack=trackState.GetPropertyTrack("offsetY");if(!xTrack||!yTrack)return;const xPositions=[...xTrack.GetPropertyKeyframeValues()];const yPositions=[...yTrack.GetPropertyKeyframeValues()];
+if(xPositions.length===0||yPositions.length===0)return;let xOrigin=0;let yOrigin=0;const wi=this._inst.GetWorldInfo();if(xTrack.GetResultMode()==="relative")xOrigin=wi.GetX();if(yTrack.GetResultMode()==="relative")yOrigin=wi.GetY();for(let i=0,len=Math.min(xPositions.length,yPositions.length);i<len;++i){const x=xPositions[i]+xOrigin;const y=yPositions[i]+yOrigin;this._AddWaypoint(x,y,i===0&&mode===0)}},MoveAlongTimelineByName(timelineName,trackId,mode){const timeline=this._runtime.GetTimelineManager().GetTimelineByName(timelineName);
+if(!timeline)return;C3.Behaviors.MoveTo.Acts.MoveAlongTimeline.call(this,timeline,trackId,mode)},Stop(){this._Stop()},SetMovingAngle(a){this._SetAngleOfMotion(C3.toRadians(a))},SetSpeed(s){this._SetSpeed(s)},SetMaxSpeed(ms){this._SetMaxSpeed(ms)},SetAcceleration(a){this._SetAcceleration(a)},SetDeceleration(d){this._SetDeceleration(d)},SetRotateSpeed(r){this._SetRotateSpeed(C3.toRadians(r))},SetStopOnSolids(e){this._SetStopOnSolids(e)},SetEnabled(e){this._SetEnabled(e)}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.MoveTo.Exps={Speed(){return this._GetSpeed()},MaxSpeed(){return this._GetMaxSpeed()},Acceleration(){return this._GetAcceleration()},Deceleration(){return this._GetDeceleration()},MovingAngle(){return C3.toDegrees(this._GetAngleOfMotion())},RotateSpeed(){return C3.toDegrees(this._GetRotateSpeed())},TargetX(){return this._GetTargetX()},TargetY(){return this._GetTargetY()},WaypointCount(){return this._GetWaypointCount()},WaypointXAt(i){return this._GetWaypointXAt(i)},
+WaypointYAt(i){return this._GetWaypointYAt(i)}}};
+
+
 "use strict"
 {
 	const C3 = self.C3;
@@ -2794,6 +2833,7 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 		C3.Plugins.Browser,
 		C3.Plugins.shadowlight,
 		C3.Behaviors.Fade,
+		C3.Behaviors.MoveTo,
 		C3.Plugins.System.Cnds.OnLayoutStart,
 		C3.Plugins.Sprite.Acts.SetVisible,
 		C3.Plugins.Touch.Cnds.OnTapGestureObject,
@@ -2803,7 +2843,8 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 		C3.Plugins.Browser.Acts.GoToURLWindow,
 		C3.Behaviors.Bullet.Acts.SetEnabled,
 		C3.Behaviors.Bullet.Acts.SetSpeed,
-		C3.Behaviors.Bullet.Acts.SetAngleOfMotion
+		C3.Behaviors.Bullet.Acts.SetAngleOfMotion,
+		C3.Behaviors.MoveTo.Acts.MoveToObject
 		];
 	};
 	self.C3_JsPropNameTable = [
@@ -2846,7 +2887,7 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 		{Browser: 0},
 		{Sprite13: 0},
 		{Sprite15: 0},
-		{Sprite35: 0},
+		{Pastedimeliga: 0},
 		{Sprite36: 0},
 		{Sprite37: 0},
 		{Sprite38: 0},
@@ -2859,7 +2900,16 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 		{Riflettore: 0},
 		{Dissolvenza: 0},
 		{Sprite17: 0},
-		{Sprite29: 0}
+		{Sprite29: 0},
+		{Sprite44: 0},
+		{Sprite45: 0},
+		{Sprite46: 0},
+		{MuoviVerso: 0},
+		{Sprite47: 0},
+		{Sprite48: 0},
+		{Sprite49: 0},
+		{indietromeliga: 0},
+		{Sprite35: 0}
 	];
 }
 
@@ -2961,14 +3011,14 @@ value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-
 	}
 
 	self.C3_ExpressionFuncs = [
-		() => 0.2,
+		() => 0.1,
 		() => "https://sasycakeaway.com/",
 		() => "NewWindow",
 		() => -200,
-		() => 0.1,
 		() => 360,
 		() => 600,
-		() => 0.25
+		() => 0.16,
+		() => 0
 	];
 }
 
