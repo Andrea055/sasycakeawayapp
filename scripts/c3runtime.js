@@ -2674,6 +2674,57 @@ Vendor(){return navigator.vendor},BatteryLevel(){return 1},BatteryTimeLeft(){ret
 WindowInnerWidth(){return this._runtime.GetCanvasManager().GetLastWidth()},WindowInnerHeight(){return this._runtime.GetCanvasManager().GetLastHeight()},WindowOuterWidth(){return this._windowOuterWidth},WindowOuterHeight(){return this._windowOuterWidth}}};
 
 
+'use strict';{const C3=self.C3;C3.Plugins.shadowlight=class ShadowLightPlugin extends C3.SDKPluginBase{constructor(opts){super(opts);this._penumbraAsset=this._runtime.LoadImage({url:"penumbra.png"});this._penumbraDrawable=null;this._runtime.AddLoadPromise(this._penumbraAsset.LoadToDrawable().then(drawable=>this._penumbraDrawable=drawable))}Release(){super.Release()}GetPenumbraDrawable(){return this._penumbraDrawable}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.shadowlight.Type=class ShadowLightType extends C3.SDKTypeBase{constructor(objectClass){super(objectClass)}Release(){super.Release()}OnCreate(){}LoadTextures(renderer){}ReleaseTextures(){}}};
+
+
+'use strict';{const C3=self.C3;const LIGHT_HEIGHT=0;const LIGHT_RADIUS=1;const SHADOW_COLOR=2;const CAST_FROM=3;const TAG=4;const ALL=0;const SAME=1;const DIFFERENT=2;const TEMP_COLOR=[0,0,0];const SHADOW_CAST_TARGETS=["all","same-tag","different-tag"];const tempColor=C3.New(C3.Color);const tempPoly=C3.New(C3.CollisionPoly);const tileCollRectCandidates=[];const tempRect=C3.New(C3.Rect);C3.Plugins.shadowlight.Instance=class ShadowLightInstance extends C3.SDKWorldInstanceBase{constructor(inst,properties){super(inst);
+const wi=this.GetWorldInfo();this._lightX=wi.GetX();this._lightY=wi.GetY();this._lightZ=0;this._maxExtrude=1E3;this._lightRadius=0;this._color=C3.New(C3.Color);this._castFrom=0;this._tag="";this._lastKnownX=wi.GetX();this._lastKnownY=wi.GetY();this._penumbraTexture=null;if(properties){this._lightZ=properties[LIGHT_HEIGHT];this._lightRadius=this._lightZ===0?properties[LIGHT_RADIUS]:0;const c=properties[SHADOW_COLOR];this._color.setRgb(c[0],c[1],c[2]);this._castFrom=properties[CAST_FROM];this._tag=
+properties[TAG]}this._shadowRenderer=C3.New(self.ShadowRenderer);this.HandleWebGLContextLoss();this._StartTicking2()}Release(){this._ReleasePenumbraTexture();if(this._shadowRenderer){this._shadowRenderer.Release();this._shadowRenderer=null}this._color=null;super.Release()}SaveToJson(){return{"lh":this._lightZ,"lr":this._lightRadius,"sc":this._color.toJSON(),"cf":this._castFrom,"t":this._tag}}LoadFromJson(o){this._lightZ=o["lh"];this._lightRadius=o["lr"];this._color.setFromJSON(o["sc"]);this._castFrom=
+o["cf"];this._tag=o["t"]}_ReleasePenumbraTexture(){if(!this._penumbraTexture)return;this._runtime.GetWebGLRenderer().DeleteTexture(this._penumbraTexture);this._penumbraTexture=null}OnWebGLContextLost(){this._penumbraTexture=null}OnWebGLContextRestored(){}_CastsFrom(otherTag){switch(this._castFrom){case ALL:return true;case SAME:return C3.equalsNoCase(this._tag,otherTag);case DIFFERENT:return!C3.equalsNoCase(this._tag,otherTag)}}Tick2(){const wi=this.GetWorldInfo();if(this._lastKnownX!==wi.GetX()||
+this._lastKnownY!==wi.GetY()){this._lightX=wi.GetX();this._lightY=wi.GetY()}const viewport=tempRect;wi.GetLayer().GetViewportForZ(wi.GetTotalZElevation(),viewport);const newX=viewport.midX();const newY=viewport.midY();const newW=viewport.width()+this._maxExtrude;const newH=viewport.height()+this._maxExtrude;if(newX!==wi.GetX()||newY!==wi.GetY()||newW!==wi.GetWidth()||newH!==wi.GetHeight()){wi.SetXY(newX,newY);wi.SetSize(newW,newH);wi.SetBboxChanged()}this._lastKnownX=wi.GetX();this._lastKnownY=wi.GetY();
+this._maxExtrude=C3.distanceTo(viewport.getLeft(),viewport.getTop(),viewport.getRight(),viewport.getBottom())*15}_GetShadowCasterCandidates(){const shadowCasterBehavior=this._runtime.GetPluginManager().GetBehaviorByConstructorFunction(C3.Behaviors.shadowcaster);if(!shadowCasterBehavior)return[];const wi=this.GetWorldInfo();const layer=wi.GetLayer();const boundBox=wi.GetBoundingBox();const objectClasses=shadowCasterBehavior.GetObjectClasses();const tempArr=[];const engine=this._runtime.GetCollisionEngine();
+engine.GetObjectClassesCollisionCandidates(layer,objectClasses,boundBox,tempArr);return[...new Set(tempArr)]}_UpdateShadowRendererParameters(){this._shadowRenderer.SetLightX(this._lightX);this._shadowRenderer.SetLightY(this._lightY);this._shadowRenderer.SetLightZ(this._lightZ);this._shadowRenderer.SetLightRadius(this._lightRadius);this._shadowRenderer.SetCastFrom(SHADOW_CAST_TARGETS[this._castFrom]);this._shadowRenderer.SetTag(this._tag);this._shadowRenderer.SetMaxExtrude(this._maxExtrude)}_MaybeCreatePenumbraTexture(renderer){if(this._penumbraTexture)return;
+const drawable=this.GetPlugin().GetPenumbraDrawable();const w=drawable.width;const h=drawable.height;const tempCanvas=C3.CreateCanvas(w,h);const tempCtx=tempCanvas.getContext("2d");tempCtx.drawImage(drawable,0,0,w,h);const imageData=tempCtx.getImageData(0,0,w,h);const arr=imageData.data;const r=Math.floor(this._color.getR()*255);const g=Math.floor(this._color.getG()*255);const b=Math.floor(this._color.getB()*255);for(let i=0,len=arr.length;i<len;i+=4){arr[i]=r;arr[i+1]=g;arr[i+2]=b}tempCtx.putImageData(imageData,
+0,0);this._penumbraTexture=renderer.CreateStaticTexture(tempCanvas,{sampling:this._runtime.GetSampling()})}Draw(renderer){this._UpdateShadowRendererParameters();this._MaybeCreatePenumbraTexture(renderer);this._shadowRenderer.SetPenumbraTexture(this._penumbraTexture);const wi=this.GetWorldInfo();tempColor.copyRgb(this._color);tempColor.setA(wi.GetOpacity());tempColor.premultiply();renderer.SetColor(tempColor);renderer.SetColorFillMode();for(const inst of this._GetShadowCasterCandidates())this._DrawInstanceShadow(renderer,
+inst)}_DrawInstanceShadow(renderer,inst){const savedMap=inst.GetSavedDataMap();if(!savedMap.get("shadowcasterEnabled")||!this._CastsFrom(savedMap.get("shadowcasterTag")))return;const h=savedMap.get("shadowcasterHeight");if(inst.HasTilemap())this._DrawTilemapShadow(renderer,inst,h);else{const wi=inst.GetWorldInfo();const poly=wi.GetTransformedCollisionPoly();tempPoly.copy(poly);tempPoly.offset(wi.GetX(),wi.GetY());this._shadowRenderer.RenderShadow(renderer,tempPoly,h)}}_DrawTilemapShadow(renderer,
+inst,h){const collRects=tileCollRectCandidates;const boundBox=this.GetWorldInfo().GetBoundingBox();inst.GetSdkInstance().GetCollisionRectCandidates(boundBox,collRects);const tmWi=inst.GetWorldInfo();const tmX=tmWi.GetX();const tmY=tmWi.GetY();for(let i=0,len=collRects.length;i<len;++i){const c=collRects[i];const tileRc=c.GetRect();const tilePoly=c.GetPoly();if(tilePoly){tempPoly.copy(tilePoly);tempPoly.offset(tmX+tileRc.getLeft(),tmY+tileRc.getTop())}else tempPoly.setFromRect(tileRc,-tmX,-tmY);this._shadowRenderer.RenderShadow(renderer,
+tempPoly,h)}C3.clearArray(collRects)}GetPropertyValueByIndex(index){switch(index){case LIGHT_HEIGHT:return this._lightZ;case LIGHT_RADIUS:return this._lightRadius;case SHADOW_COLOR:TEMP_COLOR[0]=this._color.getR();TEMP_COLOR[1]=this._color.getG();TEMP_COLOR[2]=this._color.getB();return TEMP_COLOR.slice(0);case CAST_FROM:return this._castFrom;case TAG:return this._tag}}SetPropertyValueByIndex(index,value){switch(index){case LIGHT_HEIGHT:this._lightZ=value;break;case LIGHT_RADIUS:this._lightRadius=
+value;break;case SHADOW_COLOR:this._color.setRgb(value[0],value[1],value[2]);break;case CAST_FROM:this._castFrom=value;break;case TAG:this._tag=value;break}}SetPropertyColorOffsetValueByIndex(index,r,g,b){if(r===0&&g===0&&b===0)return;switch(index){case SHADOW_COLOR:this._color.addRgb(r,g,b);break}}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.shadowlight.Cnds={}};
+
+
+'use strict';{const C3=self.C3;const tempColor=C3.New(C3.Color);C3.Plugins.shadowlight.Acts={SetLightHeight(z){if(this._lightZ===z)return;this._lightZ=z;this._runtime.UpdateRender()},SetLightColor(rgb){tempColor.setFromRgbValue(rgb);tempColor.clamp();if(this._color.equalsIgnoringAlpha(tempColor))return;this._color.copyRgb(tempColor);this._ReleasePenumbraTexture();this._runtime.UpdateRender()},SetTag(tag){if(this._tag===tag)return;this._tag=tag;this._runtime.UpdateRender()},SetCastFrom(cf){if(this._castFrom===
+cf)return;this._castFrom=cf;this._runtime.UpdateRender()}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.shadowlight.Exps={LightX(){return this._lightX},LightY(){return this._lightY},Tag(){return this._tag}}};
+
+
+'use strict';{const C3=self.C3;function IsBackFace(Lx,Ly,px,py,qx,qy){let n=C3.angleTo(px,py,qx,qy)-Math.PI/2;let a=C3.angleTo(px,py,Lx,Ly);return C3.angleDiff(a,n)>=Math.PI/2}let segmentIntersectX=0;let segmentIntersectY=0;function SegmentIntersectionAt(p0_x,p0_y,p1_x,p1_y,p2_x,p2_y,p3_x,p3_y){let s1_x=p1_x-p0_x;let s1_y=p1_y-p0_y;let s2_x=p3_x-p2_x;let s2_y=p3_y-p2_y;let div=-s2_x*s1_y+s1_x*s2_y;if(div===0)return false;let s=(-s1_y*(p0_x-p2_x)+s1_x*(p0_y-p2_y))/div;div=-s2_x*s1_y+s1_x*s2_y;if(div===
+0)return false;let t=(s2_x*(p0_y-p2_y)-s2_y*(p0_x-p2_x))/div;if(s>=0&&s<=1&&t>=0&&t<=1){segmentIntersectX=p0_x+t*s1_x;segmentIntersectY=p0_y+t*s1_y;return true}return false}let posQuad=new C3.Quad;let uvQuad=new C3.Quad;const VALID_CASTFROM=new Set(["all","same-tag","different-tag"]);self.ShadowRenderer=class ShadowRenderer{constructor(){this._lightX=0;this._lightY=0;this._lightZ=0;this._lightRadius=0;this._castFrom="all";this._tag="";this._maxExtrude=1E3;this._backFaces1=[];this._backFaces2=[];this._umbraPts=
+[];this._cwEdge1=-1;this._cwEdge2=-1;this._acwEdge1=-1;this._acwEdge2=-1;this._acwUmbraRootX=0;this._acwUmbraRootY=0;this._cwUmbraRootX=0;this._cwUmbraRootY=0;this._acwUmbraProjX=0;this._acwUmbraProjY=0;this._cwUmbraProjX=0;this._cwUmbraProjY=0;this._polyMidX=0;this._polyMidY=0;this._penumbraTexture=null}Release(){this.Reset();this._backFaces1=null;this._backFaces2=null;this._umbraPts=null;this._penumbraTexture=null}Reset(){C3.clearArray(this._backFaces1);C3.clearArray(this._backFaces2);C3.clearArray(this._umbraPts);
+this._cwEdge1=-1;this._cwEdge2=-1;this._acwEdge1=-1;this._acwEdge2=-1;this._acwUmbraRootX=0;this._acwUmbraRootY=0;this._cwUmbraRootX=0;this._cwUmbraRootY=0;this._acwUmbraProjX=0;this._acwUmbraProjY=0;this._cwUmbraProjX=0;this._cwUmbraProjY=0;this._polyMidX=0;this._polyMidY=0}SetLightX(x){this._lightX=x}GetLightX(){return this._lightX}SetLightY(y){this._lightY=y}GetLightY(){return this._lightY}SetLightZ(z){this._lightZ=z}GetLightZ(){return this._lightZ}SetLightRadius(r){if(r<0)r=0;this._lightRadius=
+r}GetLightRadius(){return this._lightRadius}SetCastFrom(c){if(!VALID_CASTFROM.has(c))throw new Error("invalid cast-from");this._castFrom=c}GetCastFrom(){return this._castFrom}SetTag(t){this._tag=t}GetTag(){return this._tag}SetMaxExtrude(e){this._maxExtrude=e}GetMaxExtrude(){return this._maxExtrude}SetPenumbraTexture(texture){this._penumbraTexture=texture}RenderShadow(renderer,poly,casterHeight){this.Reset();this.CalculateShadow(poly,casterHeight);renderer.SetColorFillMode();if(this._umbraPts.length>=
+6)renderer.ConvexPoly(this._umbraPts);if(this._lightRadius>0&&this._penumbraTexture){if(this._cwEdge1>-1&&this._cwEdge2>-1){renderer.SetTextureFillMode();renderer.SetTexture(this._penumbraTexture);this.FillPenumbra(renderer,poly,true)}if(this._acwEdge1>-1&&this._acwEdge2>-1){renderer.SetTextureFillMode();renderer.SetTexture(this._penumbraTexture);this.FillPenumbra(renderer,poly,false)}}}CalculateShadow(poly,casterHeight){this._polyMidX=poly.GetMidX();this._polyMidY=poly.GetMidY();if(this._lightRadius>
+0)this._CalculateShadowWithRadius(poly,casterHeight);else this._CalculateShadowWithoutRadius(poly,casterHeight)}_CalculateShadowWithRadius(poly,casterHeight){this._CalcBackFaces(poly,-this._lightRadius);this._FindEdges();C3.shallowAssignArray(this._backFaces2,this._backFaces1);this._cwEdge2=this._cwEdge1;this._acwEdge2=this._acwEdge1;C3.clearArray(this._backFaces1);this._cwEdge1=-1;this._acwEdge1=-1;this._CalcBackFaces(poly,this._lightRadius);this._FindEdges();if(this._cwEdge1===-1||this._acwEdge1===
+-1||this._cwEdge2===-1||this._acwEdge2===-1)return;this._CalcUmbraWithRadius(poly,casterHeight)}_CalculateShadowWithoutRadius(poly,casterHeight){this._CalcBackFaces(poly,0);this._FindEdges();let points=poly.GetPointsArray();for(let i=0,len=points.length;i<len;i+=2){let polyx=points[i];let polyy=points[i+1];this._CalcShadowSegment(i/2,this._lightX,this._lightY,polyx,polyy,casterHeight)}}_CalcBackFaces(poly,r){let OLx=this._lightX;let OLy=this._lightY;let Lx=OLx;let Ly=OLy;let a=0;if(r!==0)a=C3.angleTo(OLx,
+OLy,this._polyMidX,this._polyMidY)-Math.PI/2;let points=poly.GetPointsArray();for(let i=0,len=points.length;i<len;i+=2){let j=i+2;if(j===len)j=0;let polyx=points[i];let polyy=points[i+1];let nextx=points[j];let nexty=points[j+1];if(r!==0){Lx=OLx+Math.cos(a)*r;Ly=OLy+Math.sin(a)*r}this._backFaces1.push(IsBackFace(Lx,Ly,polyx,polyy,nextx,nexty))}}_GetBackFaceAt(i){i%=this._backFaces1.length;if(i<0)i+=this._backFaces1.length;return this._backFaces1[i]}_FindEdges(){for(let i=0,len=this._backFaces1.length;i<
+len;++i){let isBackFace=this._backFaces1[i];let lastBackFace=this._GetBackFaceAt(i-1);if(lastBackFace&&!isBackFace)this._cwEdge1=i;if(!lastBackFace&&isBackFace)this._acwEdge1=i}}_CalcShadowSegment(i,Lx,Ly,px,py,casterHeight){let isBackFace=this._backFaces1[i];let lastBackFace=this._GetBackFaceAt(i-1);let isClockwiseEdge=i===this._cwEdge1;let isAnticlockwiseEdge=i===this._acwEdge1;let x=0;let y=0;if(isBackFace||lastBackFace){let ap=C3.angleTo(Lx,Ly,px,py);let dp=C3.distanceTo(Lx,Ly,px,py);let e=this._CalculateExtrusion(Lx,
+Ly,px,py,casterHeight);x=Lx+Math.cos(ap)*(dp+e);y=Ly+Math.sin(ap)*(dp+e)}else{x=px;y=py}if(isAnticlockwiseEdge){this._umbraPts.push(px);this._umbraPts.push(py)}this._umbraPts.push(x);this._umbraPts.push(y);if(isClockwiseEdge){this._umbraPts.push(px);this._umbraPts.push(py)}}_CalculateExtrusion(Lx,Ly,x,y,h){if(h>=this._lightZ)return this._maxExtrude;if(h<=0)return 0;let dist=C3.distanceTo(Lx,Ly,x,y);let e=h*(dist/(this._lightZ-h));return C3.clamp(e,0,this._maxExtrude)}_CalcUmbraWithRadius(poly,h){let i=
+this._cwEdge2;let polyx=0;let polyy=0;let pointCount=poly.GetPointCount();let points=poly.GetPointsArray();for(;;++i){if(i===pointCount)i=0;let i2=i*2;polyx=points[i2];polyy=points[i2+1];this._umbraPts.push(polyx);this._umbraPts.push(polyy);if(i===this._acwEdge1)break}let r=this._lightRadius;let acw_x=polyx;let acw_y=polyy;let a=C3.angleTo(this._lightX,this._lightY,this._polyMidX,this._polyMidY);let L1x=this._lightX+Math.cos(a-Math.PI/2)*r;let L1y=this._lightY+Math.sin(a-Math.PI/2)*r;let ap=C3.angleTo(L1x,
+L1y,acw_x,acw_y);let ad=C3.distanceTo(L1x,L1y,acw_x,acw_y);let u1x=L1x+Math.cos(ap)*(ad+this._maxExtrude);let u1y=L1y+Math.sin(ap)*(ad+this._maxExtrude);let i2=this._cwEdge2*2;let cw_x=points[i2];let cw_y=points[i2+1];a=C3.angleTo(this._lightX,this._lightY,this._polyMidX,this._polyMidY);let L2x=this._lightX+Math.cos(a+Math.PI/2)*r;let L2y=this._lightY+Math.sin(a+Math.PI/2)*r;ap=C3.angleTo(L2x,L2y,cw_x,cw_y);ad=C3.distanceTo(L2x,L2y,cw_x,cw_y);let u2x=L2x+Math.cos(ap)*(ad+this._maxExtrude);let u2y=
+L2y+Math.sin(ap)*(ad+this._maxExtrude);this._acwUmbraRootX=acw_x;this._acwUmbraRootY=acw_y;this._cwUmbraRootX=cw_x;this._cwUmbraRootY=cw_y;if(SegmentIntersectionAt(acw_x,acw_y,u1x,u1y,cw_x,cw_y,u2x,u2y)){this._umbraPts.push(segmentIntersectX);this._umbraPts.push(segmentIntersectY);this._acwUmbraProjX=segmentIntersectX;this._acwUmbraProjY=segmentIntersectY;this._cwUmbraProjX=segmentIntersectX;this._cwUmbraProjY=segmentIntersectY}else{this._umbraPts.push(u1x);this._umbraPts.push(u1y);this._umbraPts.push(u2x);
+this._umbraPts.push(u2y);this._acwUmbraProjX=u1x;this._acwUmbraProjY=u1y;this._cwUmbraProjX=u2x;this._cwUmbraProjY=u2y}}FillPenumbra(renderer,poly,clockwise){let Lx=this._lightX;let Ly=this._lightY;let points=poly.GetPointsArray();let rootx=0;let rooty=0;let innerx=0;let innery=0;if(clockwise){rootx=this._cwUmbraRootX;rooty=this._cwUmbraRootY;innerx=this._cwUmbraProjX;innery=this._cwUmbraProjY}else{rootx=this._acwUmbraRootX;rooty=this._acwUmbraRootY;innerx=this._acwUmbraProjX;innery=this._acwUmbraProjY}let r=
+this._lightRadius;let a=C3.angleTo(Lx,Ly,this._polyMidX,this._polyMidY);let oa=Math.PI/2;if(clockwise)oa=-oa;Lx+=Math.cos(a+oa)*r;Ly+=Math.sin(a+oa)*r;let twopart=false;let secx=0;let secy=0;if(clockwise){twopart=this._cwEdge1!==this._cwEdge2;if(twopart){secx=points[this._cwEdge1*2];secy=points[this._cwEdge1*2+1]}}else{twopart=this._acwEdge1!==this._acwEdge2;if(twopart){secx=points[this._acwEdge2*2];secy=points[this._acwEdge2*2+1]}}if(twopart)a=C3.angleTo(secx,secy,rootx,rooty);else a=C3.angleTo(Lx,
+Ly,rootx,rooty);let Ux=rootx+Math.cos(a)*this._maxExtrude;let Uy=rooty+Math.sin(a)*this._maxExtrude;let U2x=0;let U2y=0;let umbra_factor=0;let rootu=0;let rootv=1;if(twopart){let a3=C3.angleTo(Lx,Ly,secx,secy);U2x=secx+Math.cos(a3)*this._maxExtrude;U2y=secy+Math.sin(a3)*this._maxExtrude;let a2=a;let a1=C3.angleTo(rootx,rooty,innerx,innery);umbra_factor=C3.angleDiff(a2,a3)/C3.angleDiff(a1,a3);let side_dist=C3.distanceTo(secx,secy,rootx,rooty);let inner_root_factor=side_dist/(side_dist+this._maxExtrude);
+let sega=C3.angleTo(0,1,umbra_factor,0);let segd=C3.distanceTo(0,1,umbra_factor,0);rootu+=Math.cos(sega)*inner_root_factor*segd;rootv+=Math.sin(sega)*inner_root_factor*segd}posQuad.set(rootx,rooty,innerx,innery,Ux,Uy,Ux,Uy);uvQuad.set(rootu,rootv,1,0,umbra_factor,0,umbra_factor,0);renderer.Quad4(posQuad,uvQuad);if(twopart){posQuad.set(secx,secy,Ux,Uy,U2x,U2y,U2x,U2y);uvQuad.set(0,1,umbra_factor,0,0,0,0,0);renderer.Quad4(posQuad,uvQuad)}}}};
+
+
 'use strict';{const C3=self.C3;C3.Behaviors.Bullet=class BulletBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}};
 
 
@@ -2708,6 +2759,30 @@ const map=new WeakMap;self.IBulletBehaviorInstance=class IBulletBehaviorInstance
 'use strict';{const C3=self.C3;C3.Behaviors.Bullet.Exps={Speed(){return this._GetSpeed()},Acceleration(){return this._GetAcceleration()},AngleOfMotion(){return C3.toDegrees(this._GetAngleOfMotion())},DistanceTravelled(){return this._GetDistanceTravelled()},Gravity(){return this._GetGravity()}}};
 
 
+'use strict';{const C3=self.C3;C3.Behaviors.Fade=class FadeBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.Fade.Type=class FadeType extends C3.SDKBehaviorTypeBase{constructor(behaviorType){super(behaviorType)}Release(){super.Release()}OnCreate(){}}};
+
+
+'use strict';{const C3=self.C3;const FADE_IN_TIME=0;const WAIT_TIME=1;const FADE_OUT_TIME=2;const DESTROY=3;const ACTIVE_AT_START=4;C3.Behaviors.Fade.Instance=class FadeInstance extends C3.SDKBehaviorInstanceBase{constructor(behInst,properties){super(behInst);this._fadeInTime=0;this._waitTime=0;this._fadeOutTime=0;this._destroy=true;this._activeAtStart=true;this._setMaxOpacity=false;this._stage=0;this._stageTime=C3.New(C3.KahanSum);this._maxOpacity=this._inst.GetWorldInfo().GetOpacity()||1;if(properties){this._fadeInTime=
+properties[FADE_IN_TIME];this._waitTime=properties[WAIT_TIME];this._fadeOutTime=properties[FADE_OUT_TIME];this._destroy=!!properties[DESTROY];this._activeAtStart=!!properties[ACTIVE_AT_START];this._stage=this._activeAtStart?0:3}if(this._activeAtStart)if(this._fadeInTime===0){this._stage=1;if(this._waitTime===0)this._stage=2}else{this._inst.GetWorldInfo().SetOpacity(0);this._runtime.UpdateRender()}this._StartTicking()}Release(){super.Release()}SaveToJson(){return{"fit":this._fadeInTime,"wt":this._waitTime,
+"fot":this._fadeOutTime,"d":this._destroy,"s":this._stage,"st":this._stageTime.Get(),"mo":this._maxOpacity}}LoadFromJson(o){this._fadeInTime=o["fit"];this._waitTime=o["wt"];this._fadeOutTime=o["fot"];this._destroy=o["d"];this._stage=o["s"];this._stageTime.Set(o["st"]);this._maxOpacity=o["mo"]}Tick(){const dt=this._runtime.GetDt(this._inst);this._stageTime.Add(dt);const wi=this._inst.GetWorldInfo();if(this._stage===0){wi.SetOpacity(this._stageTime.Get()/this._fadeInTime*this._maxOpacity);this._runtime.UpdateRender();
+if(wi.GetOpacity()>=this._maxOpacity){wi.SetOpacity(this._maxOpacity);this._stage=1;this._stageTime.Reset();this.Trigger(C3.Behaviors.Fade.Cnds.OnFadeInEnd)}}if(this._stage===1)if(this._stageTime.Get()>=this._waitTime){this._stage=2;this._stageTime.Reset();this.Trigger(C3.Behaviors.Fade.Cnds.OnWaitEnd)}if(this._stage===2)if(this._fadeOutTime!==0){wi.SetOpacity(this._maxOpacity-this._stageTime.Get()/this._fadeOutTime*this._maxOpacity);this._runtime.UpdateRender();if(wi.GetOpacity()<=0){this._stage=
+3;this._stageTime.Reset();this.Trigger(C3.Behaviors.Fade.Cnds.OnFadeOutEnd);if(this._destroy)this._runtime.DestroyInstance(this._inst)}}}Start(){this._stage=0;this._stageTime.Reset();if(this._fadeInTime===0){this._stage=1;if(this._waitTime===0)this._stage=2}else{this._inst.GetWorldInfo().SetOpacity(0);this._runtime.UpdateRender()}}GetPropertyValueByIndex(index){switch(index){case FADE_IN_TIME:return this._fadeInTime;case WAIT_TIME:return this._waitTime;case FADE_OUT_TIME:return this._fadeOutTime;
+case DESTROY:return this._destroy}}SetPropertyValueByIndex(index,value){switch(index){case FADE_IN_TIME:this._fadeInTime=value;break;case WAIT_TIME:this._waitTime=value;break;case FADE_OUT_TIME:this._fadeOutTime=value;break;case DESTROY:this._destroy=!!value;break}}GetDebuggerProperties(){const prefix="behaviors.fade";return[{title:"$"+this.GetBehaviorType().GetName(),properties:[{name:prefix+".properties.fade-in-time.name",value:this._fadeInTime,onedit:v=>this._fadeInTime=v},{name:prefix+".properties.wait-time.name",
+value:this._waitTime,onedit:v=>this._waitTime=v},{name:prefix+".properties.fade-out-time.name",value:this._fadeOutTime,onedit:v=>this._fadeOutTime=v},{name:prefix+".debugger.stage",value:[prefix+".debugger."+["fade-in","wait","fade-out","done"][this._stage]]}]}]}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.Fade.Cnds={OnFadeOutEnd(){return true},OnFadeInEnd(){return true},OnWaitEnd(){return true}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.Fade.Acts={StartFade(){if(!this._activeAtStart&&!this._setMaxOpacity){this._maxOpacity=this._inst.GetWorldInfo().GetOpacity()||1;this._setMaxOpacity=true}if(this._stage===3)this.Start()},RestartFade(){this.Start()},SetFadeInTime(t){if(t<0)t=0;this._fadeInTime=t},SetWaitTime(t){if(t<0)t=0;this._waitTime=t},SetFadeOutTime(t){if(t<0)t=0;this._fadeOutTime=t}}};
+
+
+'use strict';{const C3=self.C3;C3.Behaviors.Fade.Exps={FadeInTime(){return this._fadeInTime},WaitTime(){return this._waitTime},FadeOutTime(){return this._fadeOutTime}}};
+
+
 "use strict"
 {
 	const C3 = self.C3;
@@ -2717,12 +2792,17 @@ const map=new WeakMap;self.IBulletBehaviorInstance=class IBulletBehaviorInstance
 		C3.Plugins.Sprite,
 		C3.Behaviors.Bullet,
 		C3.Plugins.Browser,
+		C3.Plugins.shadowlight,
+		C3.Behaviors.Fade,
+		C3.Plugins.System.Cnds.OnLayoutStart,
+		C3.Plugins.Sprite.Acts.SetVisible,
 		C3.Plugins.Touch.Cnds.OnTapGestureObject,
+		C3.Behaviors.Fade.Acts.StartFade,
+		C3.Plugins.System.Acts.Wait,
 		C3.Plugins.System.Acts.GoToLayout,
 		C3.Plugins.Browser.Acts.GoToURLWindow,
 		C3.Behaviors.Bullet.Acts.SetEnabled,
 		C3.Behaviors.Bullet.Acts.SetSpeed,
-		C3.Plugins.System.Acts.Wait,
 		C3.Behaviors.Bullet.Acts.SetAngleOfMotion
 		];
 	};
@@ -2775,7 +2855,11 @@ const map=new WeakMap;self.IBulletBehaviorInstance=class IBulletBehaviorInstance
 		{Sprite41: 0},
 		{Sprite42: 0},
 		{Sprite43: 0},
-		{Indietropastsecca: 0}
+		{Indietropastsecca: 0},
+		{Riflettore: 0},
+		{Dissolvenza: 0},
+		{Sprite17: 0},
+		{Sprite29: 0}
 	];
 }
 
@@ -2877,6 +2961,7 @@ const map=new WeakMap;self.IBulletBehaviorInstance=class IBulletBehaviorInstance
 	}
 
 	self.C3_ExpressionFuncs = [
+		() => 0.2,
 		() => "https://sasycakeaway.com/",
 		() => "NewWindow",
 		() => -200,
