@@ -2950,7 +2950,12 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 		{Sprite40: 0},
 		{Sprite41: 0},
 		{Sprite42: 0},
-		{Sprite77: 0}
+		{Sprite77: 0},
+		{Sprite78: 0},
+		{Canestrelli3d: 0},
+		{biscottidifrolla3d: 0},
+		{biscottidifrollaorto3d: 0},
+		{Assabesi3d: 0}
 	];
 }
 
