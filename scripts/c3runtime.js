@@ -2725,6 +2725,27 @@ Ly,rootx,rooty);let Ux=rootx+Math.cos(a)*this._maxExtrude;let Uy=rooty+Math.sin(
 let sega=C3.angleTo(0,1,umbra_factor,0);let segd=C3.distanceTo(0,1,umbra_factor,0);rootu+=Math.cos(sega)*inner_root_factor*segd;rootv+=Math.sin(sega)*inner_root_factor*segd}posQuad.set(rootx,rooty,innerx,innery,Ux,Uy,Ux,Uy);uvQuad.set(rootu,rootv,1,0,umbra_factor,0,umbra_factor,0);renderer.Quad4(posQuad,uvQuad);if(twopart){posQuad.set(secx,secy,Ux,Uy,U2x,U2y,U2x,U2y);uvQuad.set(0,1,umbra_factor,0,0,0,0,0);renderer.Quad4(posQuad,uvQuad)}}}};
 
 
+'use strict';{const C3=self.C3;const DOM_COMPONENT_ID="iframe";C3.Plugins.iframe=class IframePlugin extends C3.SDKDOMPluginBase{constructor(opts){super(opts,DOM_COMPONENT_ID)}Release(){super.Release()}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.iframe.Type=class IframeType extends C3.SDKTypeBase{constructor(objectClass){super(objectClass)}Release(){super.Release()}OnCreate(){}}};
+
+
+'use strict';{const C3=self.C3;const DOM_COMPONENT_ID="iframe";C3.Plugins.iframe.Instance=class IframeInstance extends C3.SDKDOMInstanceBase{constructor(inst,properties){super(inst,DOM_COMPONENT_ID);this._url="";let initialHtmlStr="";this._id="";this._allowAttrib="";this._enableSandbox=false;this._sandboxAttrib="";if(properties){this._url=properties[0];initialHtmlStr=properties[1];this.GetWorldInfo().SetVisible(properties[2]);this._id=properties[3];this._allowAttrib=properties[4];this._enableSandbox=
+properties[5];this._sandboxAttrib=properties[6]}this.CreateElement({"url":"","html":initialHtmlStr,"id":this._id,"allow":this._allowAttrib,"enableSandbox":this._enableSandbox,"sandbox":this._sandboxAttrib});if(this._url)this._runtime.AddCreatePromise((async()=>{const urlToLoad=await this.GetUrl();await this.PostToDOMElementAsync("navigate-url",{"url":urlToLoad})})())}Release(){super.Release()}GetElementState(){return{}}async GetUrl(url){return await this._runtime.GetAssetManager().GetProjectFileUrl(url||
+this._url)}Draw(renderer){}SaveToJson(){return{"url":this._url,"id":this._id}}LoadFromJson(o){this._url=o["url"];this._id=o["id"];this.UpdateElementState()}GetDebuggerProperties(){const Acts=C3.Plugins.iframe.Acts;const prefix="plugins.iframe";return[{title:prefix+".name",properties:[{name:prefix+".properties.url.name",value:this._url,onedit:v=>this.CallAction(Acts.NavigateURL,v)}]}]}GetScriptInterfaceClass(){return self.IIframeInstance}};const map=new WeakMap;self.IIframeInstance=class IIframeInstance extends self.IDOMInstance{constructor(){super();
+map.set(this,self.IInstance._GetInitInst().GetSdkInstance())}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.iframe.Cnds={}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.iframe.Acts={async NavigateURL(url){const urlToLoad=await this.GetUrl(url);this.PostToDOMElement("navigate-url",{"url":urlToLoad})},DisplayHTMLString(html){this.PostToDOMElement("display-html",{"html":html})}}};
+
+
+'use strict';{const C3=self.C3;C3.Plugins.iframe.Exps={}};
+
+
 'use strict';{const C3=self.C3;C3.Behaviors.Bullet=class BulletBehavior extends C3.SDKBehaviorBase{constructor(opts){super(opts)}Release(){super.Release()}}};
 
 
@@ -2834,18 +2855,19 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 		C3.Plugins.shadowlight,
 		C3.Behaviors.Fade,
 		C3.Behaviors.MoveTo,
+		C3.Plugins.iframe,
 		C3.Plugins.System.Cnds.OnLayoutStart,
-		C3.Plugins.Sprite.Acts.SetVisible,
 		C3.Plugins.System.Acts.LoadLayoutTextures,
 		C3.Plugins.Touch.Cnds.OnTapGestureObject,
-		C3.Behaviors.Fade.Acts.StartFade,
-		C3.Plugins.System.Acts.Wait,
 		C3.Plugins.System.Acts.GoToLayout,
-		C3.Plugins.Browser.Acts.GoToURLWindow,
+		C3.Plugins.Sprite.Acts.SetVisible,
 		C3.Behaviors.Bullet.Acts.SetEnabled,
 		C3.Behaviors.Bullet.Acts.SetSpeed,
+		C3.Plugins.System.Acts.Wait,
 		C3.Behaviors.Bullet.Acts.SetAngleOfMotion,
-		C3.Behaviors.MoveTo.Acts.MoveToObject
+		C3.Behaviors.Fade.Acts.StartFade,
+		C3.Behaviors.MoveTo.Acts.MoveToObject,
+		C3.Plugins.Browser.Acts.GoToURLWindow
 		];
 	};
 	self.C3_JsPropNameTable = [
@@ -2860,14 +2882,14 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 		{Sprite8: 0},
 		{Sprite9: 0},
 		{Sprite10: 0},
-		{Sprite11: 0},
+		{Bio: 0},
 		{Sprite12: 0},
 		{Ordina: 0},
-		{Sprite14: 0},
+		{Foto: 0},
 		{Website: 0},
 		{Sprite16: 0},
 		{PasticceriaSecca: 0},
-		{Sprite18: 0},
+		{americancakes: 0},
 		{Sprite19: 0},
 		{Sprite20: 0},
 		{Sprite21: 0},
@@ -2880,7 +2902,7 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 		{Sprite28: 0},
 		{Proiettile: 0},
 		{frecciapastsecca: 0},
-		{Sprite30: 0},
+		{frecciamericancakes: 0},
 		{Sprite31: 0},
 		{Sprite32: 0},
 		{Sprite33: 0},
@@ -2955,7 +2977,24 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 		{Canestrelli3d: 0},
 		{biscottidifrolla3d: 0},
 		{biscottidifrollaorto3d: 0},
-		{Assabesi3d: 0}
+		{Assabesi3d: 0},
+		{Sprite79: 0},
+		{Sprite80: 0},
+		{Sprite81: 0},
+		{Sprite82: 0},
+		{Sprite83: 0},
+		{Sprite84: 0},
+		{Sprite85: 0},
+		{Sprite86: 0},
+		{Sprite87: 0},
+		{Sprite88: 0},
+		{iframe: 0},
+		{Sprite14: 0},
+		{homefoto: 0},
+		{foto3d: 0},
+		{Sprite18: 0},
+		{iframe2: 0},
+		{bio3d: 0}
 	];
 }
 
@@ -3057,16 +3096,16 @@ WaypointYAt(i){return this._GetWaypointYAt(i)}}};
 	}
 
 	self.C3_ExpressionFuncs = [
-		() => 0.3,
-		() => "https://sasycakeaway.com/",
-		() => "NewWindow",
 		() => -200,
 		() => 0.1,
 		() => 360,
 		() => 600,
 		() => 0.17,
+		() => 0.3,
 		() => 0.25,
-		() => 0
+		() => 0,
+		() => "https://sasycakeaway.com/",
+		() => "NewWindow"
 	];
 }
 
