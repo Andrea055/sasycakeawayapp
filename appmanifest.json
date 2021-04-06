@@ -4,8 +4,14 @@
 	"description": "Alpha release",
 	"start_url": "index.html",
 	"display": "fullscreen",
-	"orientation": "any",
+	"orientation": "portrait",
 	"background_color": "#ffffff",
-	"icons": [],
+	"icons": [
+		{
+			"src": "icons/icona.PNG",
+			"sizes": "453x475",
+			"type": "image/png"
+		}
+	],
 	"theme_color": "#ffffff"
 }
